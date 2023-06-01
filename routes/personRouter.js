@@ -6,7 +6,7 @@ const personRouter = express.Router();
 personRouter.get("/", personController.getPersons);
 personRouter.get("/:id", personController.getPersonByID);
 personRouter.post("/", personController.createPerson);
-personRouter.put("/:id", personController.editPersons);
+personRouter.put("/:id", personController.updatePerson);
 personRouter.delete("/:id", personController.deletePersons);
 
 export default personRouter;

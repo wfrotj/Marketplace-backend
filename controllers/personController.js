@@ -32,7 +32,7 @@ const createPerson = async (req, res) => {
   }
 };
 
-const editPersons = async (req, res) => {
+const updatePerson = async (req, res) => {
   try {
     const { id } = req.params;
     const person = await Person.findByIdAndUpdate(id, req.body);
@@ -59,6 +59,6 @@ export default {
   getPersons,
   getPersonByID,
   createPerson,
-  editPersons,
+  updatePerson,
   deletePersons,
 };
