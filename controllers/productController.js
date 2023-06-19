@@ -1,4 +1,6 @@
 import Product from "../models/Product.js";
+import { ref, uploadBytes } from "firebase/storage";
+import storage from "../utils/firebaseConfig.js";
 
 const getProducts = async (req, res) => {
   try {
@@ -11,38 +13,91 @@ const getProducts = async (req, res) => {
   }
 };
 
-const getProductByID = async (req, res) => {
+// const getProductByID = async (req, res) => {
+//   try {
+//     const { dateCreated } = req.params;
+//     const product = await Product.findOne(dateCreated);
+//     res.status(200).json(product);
+//   } catch (error) {
+//     console.log(error);
+//     res.status(404).json({ message: error.message });
+//   }
+// };
+
+const getProductsByDate = async (req, res) => {
   try {
-    const { id } = req.params;
-    const product = await Product.findById(id);
-    res.status(200).json(product);
+    const { dateCreated } = req.params;
+
+    // Parse the date string from the URL parameter
+    const date = new Date(dateCreated);
+
+    // Get the start and end of the specified date
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const end = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() + 1
+    );
+
+    const products = await Product.find({
+      createdAt: { $gte: start, $lt: end },
+    });
+
+    res.status(200).json(products);
   } catch (error) {
     console.log(error);
     res.status(404).json({ message: error.message });
   }
 };
 
-const createProduct = async (req, res) => {
-  // try {
-  //   const { name, number } = req.body;
-  //   const productExists = await Product.findOne({ name });
+// const createProduct = async (req, res) => {
+//   try {
+//     const { name, price } = req.body;
+//     const product = new Product({
+//       name,
+//       price,
+//     });
+//     const savedProduct = await product.save();
 
-  //   if (productExists)
-  //     return res.status(400).json({ error: "Product already exists" });
-  //   if (name === "" || number === "")
-  //     return res
-  //       .status(400)
-  //       .json({ error: "Product name and price are required" });
+//     res.status(200).json(savedProduct);
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
 
-  //   const product = new Product({
-  //     name,
-  //     price,
-  //   });
-  //   const savedProduct = await person.save();
-  //   return res.status(201).json(savedProduct);
-  // } catch (error) {
-  //   console.log(error);
-  // }
+const createProduct = async (req, res, next) => {
+  const storageRef = ref(storage, req.file.originalname);
+  const metaData = {
+    contentType: "image/jpeg",
+  };
+
+  const snapshot = await uploadBytes(storageRef, req.file.buffer, metaData);
+
+  const photoUrl = `https://firebasestorage.googleapis.com/v0/b/${snapshot.ref.bucket}/o/${snapshot.ref.fullPath}?alt=media`;
+  try {
+    const { name, price } = req.body;
+    const productExists = await Product.findOne({ name });
+
+    if (productExists)
+      return res.status(400).json({ error: "Product already exists" });
+    if (name === "" || price === "")
+      return res
+        .status(400)
+        .json({ error: "Product name and price are required" });
+
+    const product = new Product({
+      name,
+      price,
+      photoInfo: {
+        url: photoUrl,
+        filename: snapshot.ref.fullPath,
+      },
+    });
+    const savedProduct = await product.save();
+    return res.status(201).json(savedProduct);
+  } catch (error) {
+    next(error);
+  }
 
   try {
     const product = await Product.create(req.body);
@@ -85,7 +140,7 @@ const deleteProduct = async (req, res) => {
 
 export default {
   getProducts,
-  getProductByID,
+  getProductsByDate,
   createProduct,
   updateProduct,
   deleteProduct,
